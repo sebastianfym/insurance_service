@@ -8,10 +8,14 @@ from db.db_service import get_session
 
 
 from src.api.tariff.router import router
+from src.schemas.error import ErrorException
 from src.services.tariff import TariffUtilitiesService
 
 
-@router.post("/upload-tariffs/", status_code=HTTP_200_OK, summary="Upload tariffs")
+@router.post("/upload-tariffs/", status_code=HTTP_200_OK, summary="Upload tariffs", responses={
+                400: {"model": ErrorException, "detail": "unexpected error",
+                      "message": "The file was not uploaded"}
+            })
 async def upload_tariffs(file: UploadFile = File(...), session: Session = Depends(get_session)):
     tariff_service = TariffUtilitiesService(session)
     try:

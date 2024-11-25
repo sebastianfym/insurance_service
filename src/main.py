@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.tariff.router import router as tariff_router
 from src.api.insurance.router import router as insurance_router
+from src.api.user.router import router as user_router
 
 from config import settings
 
@@ -20,6 +21,7 @@ app.add_middleware(
 v1 = APIRouter(prefix="/api/v1")
 v1.include_router(tariff_router)
 v1.include_router(insurance_router)
+v1.include_router(user_router)
 
 
 app.include_router(v1)

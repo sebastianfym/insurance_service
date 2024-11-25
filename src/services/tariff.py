@@ -7,8 +7,13 @@ from fastapi import UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
+from db import Tariff
 from db.repositories.tariff import TariffRepository
-from src.schemas.tariff import TariffCreate
+from db.repositories.user import UserRepository
+from src.enums.kafka import LogType
+from src.schemas.tariff import TariffCreate, TariffEdit
+from src.services.auth import AuthUtilitiesService
+from src.services.kafka import send_to_kafka_async
 
 
 class TariffUtilitiesService:
@@ -32,3 +37,18 @@ class TariffUtilitiesService:
                     rate=float(tariff["rate"].replace(",", "."))
                 )
                 await tariff_repository.create_tariff(tariff=tariff_data)
+
+    async def delete_tariff(self, tariff_id: int):
+        tariff_repository = TariffRepository(self.session)
+        await tariff_repository.delete_tariff(tariff_id)
+
+    async def edit_tariff(self, tariff_id, tariff_data: TariffEdit, token:str) -> Tariff:
+        payload = AuthUtilitiesService.verify_token(token)
+        user_repository = UserRepository(self.session)
+        user = await user_repository.get_current_user(payload)
+        logg = {"action":"Edit tariff", "date": datetime.now()}
+        if user is not None:
+            logg = {"action": f"User: {user.id} edit tariff", "date": datetime.now()}
+        await send_to_kafka_async(topic="Edit", key=LogType.TARIFF.value, value=logg)
+        tariff_repository = TariffRepository(self.session)
+        return await tariff_repository.edit_tariff(tariff_id, tariff_data.dict())
