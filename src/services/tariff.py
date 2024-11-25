@@ -10,7 +10,7 @@ from config import settings
 from db import Tariff
 from db.repositories.tariff import TariffRepository
 from db.repositories.user import UserRepository
-from src.enums.kafka import LogType
+from src.enums.enum import LogType, LogAction
 from src.schemas.tariff import TariffCreate, TariffEdit
 from src.services.auth import AuthUtilitiesService
 from src.services.kafka import send_to_kafka_async
@@ -24,7 +24,9 @@ class TariffUtilitiesService:
         data = json.loads(await file.read())
         return data
 
-    async def upload_tariff(self, file: File):
+    async def upload_tariff(self, file: File, token:str):
+        logg = await self.log_action(token, LogAction.UPLOAD)
+        await send_to_kafka_async(topic="Edit", key=LogType.TARIFF.value, value=logg)
         tariff_repository = TariffRepository(self.session)
 
         data = await self.get_data_file(file)
@@ -38,17 +40,23 @@ class TariffUtilitiesService:
                 )
                 await tariff_repository.create_tariff(tariff=tariff_data)
 
-    async def delete_tariff(self, tariff_id: int):
+    async def delete_tariff(self, tariff_id: int, token:str):
+        logg = await self.log_action(token, LogAction.DELETE)
+        await send_to_kafka_async(topic="Edit", key=LogType.TARIFF.value, value=logg)
         tariff_repository = TariffRepository(self.session)
         await tariff_repository.delete_tariff(tariff_id)
 
     async def edit_tariff(self, tariff_id, tariff_data: TariffEdit, token:str) -> Tariff:
-        payload = AuthUtilitiesService.verify_token(token)
-        user_repository = UserRepository(self.session)
-        user = await user_repository.get_current_user(payload)
-        logg = {"action":"Edit tariff", "date": datetime.now()}
-        if user is not None:
-            logg = {"action": f"User: {user.id} edit tariff", "date": datetime.now()}
+        logg = await self.log_action(token, LogAction.EDIT)
         await send_to_kafka_async(topic="Edit", key=LogType.TARIFF.value, value=logg)
         tariff_repository = TariffRepository(self.session)
         return await tariff_repository.edit_tariff(tariff_id, tariff_data.dict())
+
+    async def log_action(self, token:str, action: LogAction) -> dict:
+        payload = AuthUtilitiesService.verify_token(token)
+        user_repository = UserRepository(self.session)
+        user = await user_repository.get_current_user(payload)
+        logg = {"action": f"{action.value} tariff", "date": datetime.now()}
+        if user is not None:
+            logg = {"action": f"User: {user.id} edit tariff", "date": datetime.now()}
+        return logg

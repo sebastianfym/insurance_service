@@ -4,6 +4,7 @@ from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 
+from config import oauth2_scheme
 from db.db_service import get_session
 
 
@@ -16,10 +17,11 @@ from src.services.tariff import TariffUtilitiesService
                 400: {"model": ErrorException, "detail": "unexpected error",
                       "message": "The file was not uploaded"}
             })
-async def upload_tariffs(file: UploadFile = File(...), session: Session = Depends(get_session)):
+async def upload_tariffs(file: UploadFile = File(...), session: Session = Depends(get_session),
+                        token: str = Depends(oauth2_scheme)):
     tariff_service = TariffUtilitiesService(session)
     try:
-        await tariff_service.upload_tariff(file)
+        await tariff_service.upload_tariff(file, token)
         return {"status_code": HTTP_200_OK, "detail": "Tariffs uploaded successfully"}
     except Exception as error:
         return HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=error)

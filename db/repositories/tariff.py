@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.tariff import Tariff
-from src.enums.kafka import TariffFilter
+from src.enums.enum import TariffFilter
 from src.schemas.tariff import TariffCreate
 
 

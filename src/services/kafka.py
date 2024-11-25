@@ -2,7 +2,7 @@ from aiokafka import AIOKafkaProducer
 import json
 
 from config import kafka_config
-from src.enums.kafka import LogType
+from src.enums.enum import LogType
 
 
 async def send_to_kafka_async(topic: str, key: LogType, value: dict):
